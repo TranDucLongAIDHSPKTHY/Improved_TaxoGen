@@ -1,0 +1,201 @@
+diff --git a/code/case_ranker.py b/code/case_ranker.py
+index 22da68c..f8f8283 100644
+--- a/code/case_ranker.py
++++ b/code/case_ranker.py
+@@ -41,7 +41,7 @@ def rank_phrase(case_file):
+ 	unif = [1.0 / cell_cnt] * cell_cnt
+ 
+ 	for ph in phrase_map:
+-		ph_vec = [x[1] for x in phrase_map[ph].iteritems()]
++		ph_vec = [x[1] for x in phrase_map[ph].items()]
+ 		if len(ph_vec) < cell_cnt:
+ 			ph_vec += [0] * (cell_cnt - len(ph_vec))
+ 		# smoothing
+@@ -49,7 +49,7 @@ def rank_phrase(case_file):
+ 		ph_vec = utils.l1_normalize(ph_vec)
+ 		ph_dist_map[ph] = utils.kl_divergence(ph_vec, unif)
+ 
+-	ranked_list = sorted(ph_dist_map.items(), key=operator.itemgetter(1), reverse=True)
++	ranked_list = sorted(list(ph_dist_map.items()), key=operator.itemgetter(1), reverse=True)
+ 	
+ 	return ranked_list
+ 
+diff --git a/code/caseslim.py b/code/caseslim.py
+index 65a5cfb..59aa79c 100644
+--- a/code/caseslim.py
++++ b/code/caseslim.py
+@@ -66,7 +66,7 @@ class CaseSlim:
+ 			group = [(self_df, self.max_df, self_cnt, sum_self)]
+ 
+ 			self.context_groups[phrase] = []
+-			for phrase_group, phrase_values in self.phrase_cnt_context.items():
++			for phrase_group, phrase_values in list(self.phrase_cnt_context.items()):
+ 				context_df = self.phrase_df_context[phrase_group].get(phrase, 0)
+ 				sum_context = self.sum_cnt_context[phrase_group]
+ 				context_cnt = phrase_values.get(phrase, 0)
+@@ -167,7 +167,7 @@ class CaseSlim:
+ 		self.sum_cnt = sum(self.phrase_cnt.values())
+ 		self.sum_cnt_context = {}
+ 		self.global_scores = global_scores
+-		for group, docs in context_doc_groups.items():
++		for group, docs in list(context_doc_groups.items()):
+ 			self.phrase_cnt_context[group], self.phrase_df_context[group] = self.agg_phrase_cnt_df(freq_data, docs)
+ 			if len(self.phrase_df_context[group]) > 0:
+ 				self.max_df_context[group] = max(self.phrase_df_context[group].values())
+diff --git a/code/cluster-preprocess.py b/code/cluster-preprocess.py
+index c547540..3879250 100644
+--- a/code/cluster-preprocess.py
++++ b/code/cluster-preprocess.py
+@@ -87,7 +87,7 @@ def gen_doc_keyword_cnt_file(doc_file, keyword_cnt_file):
+ 
+ def counter_to_string(counter):
+     elements = []
+-    for k, v in counter.items():
++    for k, v in list(counter.items()):
+         elements.append(k)
+         elements.append(v)
+     return '\t'.join([str(e) for e in elements])
+diff --git a/code/compress.py b/code/compress.py
+index d444ad5..4fff169 100644
+--- a/code/compress.py
++++ b/code/compress.py
+@@ -1,7 +1,7 @@
+ import argparse
+ import utils
+ import operator
+-import Queue
++import queue
+ import math
+ from os import listdir
+ from os.path import isfile, join, isdir, abspath, dirname, basename, exists
+@@ -37,12 +37,12 @@ def parse_reidx(reidx_f):
+ 		if len(pd_map[ph]) > 0:
+ 			ph_idf[ph] = math.log(float(d_cnt) / len(pd_map[ph]))
+ 
+-	print 'Inverted Index file read.'
++	print('Inverted Index file read.')
+ 
+ 
+ 
+ def get_rep(folder, c_id, N):
+-	print('Start get representative phrases for %s, %s ========================' % (folder, c_id))
++	print(('Start get representative phrases for %s, %s ========================' % (folder, c_id)))
+ 	# print folder
+ 	par_folder = dirname(folder)
+ 	cur_label = basename(folder)
+@@ -72,7 +72,7 @@ def get_rep(folder, c_id, N):
+ 			emb_dist = utils.cossim(embs[ph], embs[cur_label])
+ 			ph_scores[ph] = score * emb_dist
+ 
+-		ph_scores = sorted(ph_scores.items(), key=operator.itemgetter(1), reverse=True)
++		ph_scores = sorted(list(ph_scores.items()), key=operator.itemgetter(1), reverse=True)
+ 
+ 		for (ph, score) in ph_scores:
+ 			if ph not in result_phrases and ph in kws:
+@@ -81,7 +81,7 @@ def get_rep(folder, c_id, N):
+ 				break
+ 		
+ 	elif ph_idf == None:
+-		print 'looking at embeddings for %s' % folder
++		print('looking at embeddings for %s' % folder)
+ 
+ 		ph_f = '%s/embeddings.txt' % par_folder
+ 		kw_f = '%s/keywords.txt' % par_folder
+@@ -119,7 +119,7 @@ def get_rep(folder, c_id, N):
+ 				result_phrases.append(ph)
+ 	else:
+ 		# Using TF-IDF to generate
+-		print 'looking at tf-idf for %s' % folder
++		print('looking at tf-idf for %s' % folder)
+ 		d_clus_f = '%s/paper_cluster.txt' % par_folder
+ 		kw_clus_f = '%s/cluster_keywords.txt' % par_folder
+ 		docs = []
+@@ -148,7 +148,7 @@ def get_rep(folder, c_id, N):
+ 				continue
+ 			ph_scores[ph] = 1 + math.log(ph_scores[ph])
+ 			ph_scores[ph] *= ph_idf[ph]
+-		ph_scores = sorted(ph_scores.items(), key=operator.itemgetter(1), reverse=True)
++		ph_scores = sorted(list(ph_scores.items()), key=operator.itemgetter(1), reverse=True)
+ 
+ 		for (ph, score) in ph_scores:
+ 			if ph not in result_phrases:
+@@ -161,7 +161,7 @@ def get_rep(folder, c_id, N):
+ 
+ def recursion(root, o_file, N):
+ 
+-	q = Queue.Queue()
++	q = queue.Queue()
+ 	q.put((root, -1, '*'))
+ 
+ 	g = open(o_file, 'w+')
+diff --git a/code/paras.py b/code/paras.py
+index 027ae53..98c71a0 100644
+--- a/code/paras.py
++++ b/code/paras.py
+@@ -99,7 +99,7 @@ def load_sp_params():
+ 
+ def load_dblp_params_method():
+     pd = dict()
+-    pd['data_dir'] = '/shared/data/jiaming/local-embedding/data/dblp/'
++    pd['data_dir'] = '../data/dblp/'
+     pd['doc_file'] = pd['data_dir'] + 'input/papers.txt'
+     pd['doc_keyword_cnt_file'] = pd['data_dir'] + 'input/keyword_cnt.txt'
+     pd['input_dir'] = pd['data_dir'] + 'input/'
+diff --git a/code/utils.py b/code/utils.py
+index 085e722..ca29d88 100644
+--- a/code/utils.py
++++ b/code/utils.py
+@@ -31,7 +31,7 @@ def avg_weighted_colors(color_list, c_size):
+ 	for (color, weight) in color_list:
+ 		w_color = [x * weight for x in color]
+ 		# print w_color
+-		result_color = map(operator.add, result_color, w_color)
++		result_color = list(map(operator.add, result_color, w_color))
+ 		# print result_color
+ 	return l1_normalize(result_color)
+ 
+@@ -57,7 +57,7 @@ def cossim(p, q):
+ 
+ def euclidean_distance(p, q):
+ 	if len(p) != len(q):
+-		print 'Euclidean distance error: p, q have different length'
++		print('Euclidean distance error: p, q have different length')
+ 	
+ 	distance = 0
+ 
+@@ -69,7 +69,7 @@ def euclidean_distance(p, q):
+ 
+ def euclidean_cluster(ps, c):
+ 	if len(ps) == 0 or c == None:
+-		print 'Cluster is empty'
++		print('Cluster is empty')
+ 
+ 	distance = 0
+ 
+@@ -83,7 +83,7 @@ def euclidean_cluster(ps, c):
+ 
+ def dot_product(p, q):
+ 	if len(p) != len(q):
+-		print 'KL divergence error: p, q have different length'
++		print('KL divergence error: p, q have different length')
+ 	
+ 	p_len = q_len = mix_len = 0
+ 
+@@ -122,7 +122,7 @@ def avg_emb_with_distinct(ele_map, embs_from, dist_map, vec_size):
+ 	avg_emb = [0] * vec_size
+ 	t_weight = 0
+ 
+-	for key, value in ele_map.iteritems():
++	for key, value in ele_map.items():
+ 		t_emb = embs_from[key]
+ 		w = value * dist_map[key]
+ 		for i in range(vec_size):
+@@ -140,7 +140,7 @@ def avg_emb(ele_map, embs_from, vec_size):
+ 	avg_emb = [0] * vec_size
+ 	t_weight = 0
+ 
+-	for key, value in ele_map.iteritems():
++	for key, value in ele_map.items():
+ 		t_emb = embs_from[key]
+ 		w = value
+ 		for i in range(vec_size):

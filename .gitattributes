@@ -1,0 +1,2 @@
+# keep the patch byte-exact so `git apply` works on a fresh clone
+tools/taxogen_original/original_code.patch -text

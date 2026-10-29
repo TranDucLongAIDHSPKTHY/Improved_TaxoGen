@@ -1,0 +1,60 @@
+# Shared by every Amazon Reviews 2023 category.
+_base_: _base_taxonomy.yaml
+
+corpus:
+  source: reviews
+  exclude_heldout: true      # reviews of validation/test interactions never enter the taxonomy corpus
+  verified_only: true
+  min_words: 30
+  ascii_only: true
+  # unaccented Spanish reviews pass ascii_only and formed whole Spanish
+  # branches in the Amazon_Fashion taxonomies
+  english_only: true
+  sample_fraction: null      # e.g. 0.5 keeps a deterministic half of the reviews
+  # one process per physical core of the 6-core machine used for the paper;
+  # the output does not depend on this number, only the speed does
+  tokenizer: {type: spacy, n_process: 6, batch_size: 256}
+  phrases: {min_count: 20, threshold: 10.0, passes: 2}
+  min_doc_tokens: 5
+  min_df: 20
+  max_df_ratio: 0.35
+  # candidate terms are nouns or noun-headed phrases (long_sleeve), as the
+  # keywords of the DBLP release; standalone adjectives (lovely, skinny,
+  # yellow) formed nodes of praise, body shape or colour words
+  noun_headed: true
+
+rec:
+  item_fields: [title, store, features, description]   # metadata only, never reviews
+  min_item_text_len: 10
+  min_rating: null
+  # 5-core leaves no interaction at all in Amazon_Fashion or Handmade_Products
+  # (2023 release), so only users are filtered: every user
+  # keeps >= 3 interactions (train/valid/test) and items need no minimum
+  kcore: {user: 3, item: 1}
+  min_len: 3
+  item_encoder: sbert
+  ks: [5, 10, 20]
+  metric: ndcg@10
+  max_valid_users: 20000
+  # items are matched against each node's top 10 terms: the original TaxoGen
+  # keeps only 10 per node, so more would favour the methods that keep all
+  taxonomy_top_k: 10
+  taxonomies: [improved, taxogen, sbert_kmeans]
+  cf_params: {shrink: 0}
+  reference: Sem
+  significance_metrics: [ndcg@10, recall@10]
+  n_boot: 10000
+  models:
+    - {name: Popularity, type: popularity}
+    - {name: ItemKNN, type: itemknn, grid: {shrink: [0, 10, 50], topk: [null, 200]}}
+    - {name: RP3beta, type: rp3beta, grid: {alpha: [0.5, 1.0], beta: [0.0, 0.3, 0.6], topk: [200]}}
+    - {name: BPR-MF, type: bpr, grid: {dim: [64], lr: [0.05], reg: [0.0001, 0.001], epochs: [30]}}
+    - {name: Sem, type: hybrid, components: [sem]}
+    # the control for Sem+Tax(Improved)+CF: the same fusion without the taxonomy
+    - {name: Sem+CF, type: hybrid, components: [sem, cf], weight_step: 0.1}
+    - {name: Tax(Improved), type: hybrid, components: ["tax:improved"]}
+    - {name: Tax(TaxoGen), type: hybrid, components: ["tax:taxogen"]}
+    - {name: Sem+Tax(Improved), type: hybrid, components: [sem, "tax:improved"], weight_step: 0.1}
+    - {name: Sem+Tax(TaxoGen), type: hybrid, components: [sem, "tax:taxogen"], weight_step: 0.1}
+    - {name: Sem+Tax(SBERT-kmeans), type: hybrid, components: [sem, "tax:sbert_kmeans"], weight_step: 0.1}
+    - {name: Sem+Tax(Improved)+CF, type: hybrid, components: [sem, "tax:improved", cf], weight_step: 0.1}

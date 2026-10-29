@@ -1,0 +1,19 @@
+# Amazon Reviews 2023, Baby_Products: amazon_fashion.yaml with only the category
+# and paths changed, and the taxonomy corpus subsampled to Amazon Fashion's scale.
+# Get the data with: python -m taxorec download --config configs/baby_products.yaml
+_base_: _base_amazon.yaml
+dataset: baby_products
+paths:
+  out_dir: outputs/baby_products
+amazon:
+  category: Baby_Products
+  reviews: data/raw/Baby_Products.jsonl.gz
+  meta: data/raw/meta_Baby_Products.jsonl.gz
+corpus:
+  # review file 837,501,465 bytes > 1.5 x Fashion's 292,425,439: keep that ratio
+  # of the reviews (deterministic hash sample); recommendation uses every interaction
+  sample_fraction: 0.34916409   # 292,425,439 / 837,501,465
+evaluation:
+  # unlike Amazon_Fashion, almost every product has a category path
+  # (18,925 of the first 20,000), e.g. Baby Products > Strollers & Accessories > Strollers
+  gold: true
